@@ -65,7 +65,9 @@ function formatDate(dateStr) {
   });
 }
 
-function TransferRow({ transfer }) {
+// Exportado: la pestaña "Fichajes" de la ficha de equipo (TeamDetail)
+// reusa esta misma fila en vez de reimplementar el layout altas/bajas.
+export function TransferRow({ transfer }) {
   return (
     <li className="transfer-row">
       <span className="transfer-date">{formatDate(transfer.date)}</span>

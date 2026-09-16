@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchRefereeDetail } from "../api";
+import TeamLink from "./TeamLink";
 import { ChevronLeftIcon } from "./icons";
 import { useDocumentMeta } from "../useDocumentMeta";
 
@@ -115,7 +116,11 @@ export default function RefereeDetail({ refereeId, onBack }) {
                       {new Date(m.date).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" })}
                     </span>
                     <span className="h2h-recent-teams">
-                      {m.home} <strong>{m.homeScore} - {m.awayScore}</strong> {m.away}
+                      <TeamLink teamId={m.homeId}>{m.home}</TeamLink>{" "}
+                      <strong>
+                        {m.homeScore} - {m.awayScore}
+                      </strong>{" "}
+                      <TeamLink teamId={m.awayId}>{m.away}</TeamLink>
                     </span>
                   </li>
                 ))}

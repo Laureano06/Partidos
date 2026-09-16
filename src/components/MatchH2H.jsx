@@ -1,3 +1,5 @@
+import TeamLink from "./TeamLink";
+
 const RESULT_LABEL = { W: "Ganó", D: "Empató", L: "Perdió" };
 
 // Forma reciente de un equipo: últimos 5 resultados como chips W/D/L,
@@ -74,7 +76,11 @@ export default function MatchH2H({ h2h, form, homeName, awayName }) {
                     {new Date(m.date).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" })}
                   </span>
                   <span className="h2h-recent-teams">
-                    {m.home} <strong>{m.home_score} - {m.away_score}</strong> {m.away}
+                    <TeamLink teamId={m.home_team_id}>{m.home}</TeamLink>{" "}
+                    <strong>
+                      {m.home_score} - {m.away_score}
+                    </strong>{" "}
+                    <TeamLink teamId={m.away_team_id}>{m.away}</TeamLink>
                   </span>
                 </li>
               ))}

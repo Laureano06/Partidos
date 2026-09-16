@@ -55,6 +55,14 @@ export async function fetchTeamProfile(teamId) {
   return getJson(`/api/teams/${teamId}`);
 }
 
+// Calendario completo (jugados + por jugar) de un equipo — separado de
+// fetchTeamProfile a propósito, ver el comentario de fetchTeamCalendar
+// en el backend: es la pestaña que menos gente abre, no tiene sentido
+// pagarla en cada visita a la ficha de equipo.
+export async function fetchTeamCalendar(teamId) {
+  return getJson(`/api/teams/${teamId}/calendar`);
+}
+
 export async function fetchMatchDetail(matchId) {
   return getJson(`/api/matches/${matchId}`);
 }

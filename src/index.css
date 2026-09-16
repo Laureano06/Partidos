@@ -1635,6 +1635,16 @@ header {
   color: var(--text);
 }
 
+.h2h-recent-time {
+  font-family: var(--font-mono);
+  color: var(--text-dimmer);
+}
+
+.h2h-recent-competition {
+  color: var(--text-dimmer);
+  font-size: 11px;
+}
+
 /* --- Forma reciente (MatchH2H, FormStrip) --- */
 .form-strip-row {
   display: flex;
@@ -2430,6 +2440,15 @@ footer {
   padding: 7px 6px;
   border-bottom: 1px solid var(--line);
   color: var(--text-dim);
+}
+
+.standings-row-highlight {
+  background: var(--accent-dim);
+}
+
+.standings-row-highlight td {
+  color: var(--text);
+  font-weight: 700;
 }
 
 .standings-team-col {
