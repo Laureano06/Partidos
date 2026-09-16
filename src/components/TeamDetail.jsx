@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchTeamProfile } from "../api";
-import { crestColor } from "../utils";
+import { crestColor, formatTime, labelForDate, toDateKey } from "../utils";
 import FavoriteButton from "./FavoriteButton";
 import PlayerFace from "./PlayerFace";
 import PlayerLink from "./PlayerLink";
+import TeamLink from "./TeamLink";
 import { ChevronLeftIcon } from "./icons";
 import { useDocumentMeta } from "../useDocumentMeta";
 
@@ -14,6 +15,20 @@ const POSITION_LABEL = {
   Midfielders: "Mediocampistas",
   Forwards: "Delanteros",
 };
+
+const RESULT_LABEL = { W: "Ganó", D: "Empató", L: "Perdió" };
+
+// Escudo circular con respaldo de color por hash — mismo patrón que
+// Crest Avatar (ver DESIGN.md) usado en toda la app para escudos chicos
+// que pueden faltar en la API.
+function OpponentCrest({ crest, name, className }) {
+  if (crest) return <img src={crest} alt="" className={className} />;
+  return (
+    <span className={className} style={{ background: crestColor(name || "") }}>
+      {(name || "?").slice(0, 3).toUpperCase()}
+    </span>
+  );
+}
 
 function groupSquadByPosition(squad) {
   const groups = {};
@@ -126,6 +141,56 @@ export default function TeamDetail({ teamId, onBack, isFavorite, onToggleFavorit
               )}
             </div>
           </div>
+
+          {profile.nextMatch && (
+            <div className="team-section">
+              <h2 className="team-section-title">Próximo partido</h2>
+              <TeamLink teamId={profile.nextMatch.opponentId} className="next-match-card">
+                <OpponentCrest
+                  crest={profile.nextMatch.opponentCrest}
+                  name={profile.nextMatch.opponentName}
+                  className="next-match-crest"
+                />
+                <span className="next-match-info">
+                  <span className="next-match-vs">
+                    {profile.nextMatch.isHome ? "vs" : "@"} {profile.nextMatch.opponentName}
+                  </span>
+                  <span className="next-match-meta">
+                    {profile.nextMatch.competition ? `${profile.nextMatch.competition} · ` : ""}
+                    {labelForDate(toDateKey(new Date(profile.nextMatch.date)))} ·{" "}
+                    {formatTime(profile.nextMatch.date)}
+                  </span>
+                </span>
+              </TeamLink>
+            </div>
+          )}
+
+          {profile.recentMatches?.length > 0 && (
+            <div className="team-section">
+              <h2 className="team-section-title">Últimos partidos</h2>
+              <ul className="h2h-recent-list">
+                {profile.recentMatches.map((m) => (
+                  <li key={m.id} className="h2h-recent-row">
+                    <span
+                      className={"form-chip form-chip-sm form-chip-" + m.result}
+                      title={RESULT_LABEL[m.result]}
+                    >
+                      {m.result}
+                    </span>
+                    <span className="h2h-recent-date">
+                      {new Date(m.date).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })}
+                    </span>
+                    <span className="h2h-recent-teams">
+                      {m.isHome ? "vs" : "@"} <TeamLink teamId={m.opponentId}>{m.opponent}</TeamLink>{" "}
+                      <strong>
+                        {m.goalsFor}-{m.goalsAgainst}
+                      </strong>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {profile.squad.length > 0 && (
             <div className="team-section">
