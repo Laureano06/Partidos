@@ -2,6 +2,12 @@
 
 **Live:** https://partidos.com.ar
 
+![Partidos: matches of the day](docs/screenshots/home.png)
+
+| Match detail · Detalle de partido | Standings · Tabla de posiciones | Mobile · Celular |
+|---|---|---|
+| ![Match detail](docs/screenshots/match.png) | ![Standings](docs/screenshots/standings.png) | ![Mobile](docs/screenshots/mobile.png) |
+
 [English](#english) · [Español](#español)
 
 ---
