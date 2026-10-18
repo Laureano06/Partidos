@@ -1,0 +1,4101 @@
+:root {
+  /* Paleta sacada del ícono de la app (iconoPARTIDOS.png): navy de fondo,
+     blanco de la letra "P", y un azul derivado del mismo matiz para los
+     estados interactivos (el ícono en sí es monocromo, no tiene un color
+     de acento propio, así que este azul es una extensión coherente del
+     mismo tono, no un color inventado aparte). */
+  --bg: #0f1a2d; /* navy exacto del fondo del ícono */
+  --bg-card: #182339;
+  --bg-card-hover: #212d48;
+  --bg-strip: #0a1322;
+  --line: rgba(255, 255, 255, 0.1);
+  --text: #ffffff; /* blanco exacto de la "P" del ícono */
+  --text-dim: rgba(255, 255, 255, 0.6);
+  /* 0.5, no 0.32: a los tamaños chicos donde se usa (9-11px, badges,
+     labels, meta) 0.32 mide ~2.9:1 de contraste contra --bg, por debajo
+     del piso de 4.5:1 para texto. 0.5 mide ~4.6:1 y sigue leyéndose
+     claramente más apagado que --text-dim (0.6). */
+  --text-dimmer: rgba(255, 255, 255, 0.5);
+  --accent: #2c69d2; /* mismo matiz del navy, más claro — para estados activos */
+  --accent-text: #ffffff;
+  --accent-dim: rgba(44, 105, 210, 0.2);
+  --gray-mid: #6b7688;
+  --live: #e0342a; /* rojo para "en vivo" — es información, no decoración */
+  --warn: #d9a441; /* ámbar para avisos de "esto puede estar desactualizado" */
+  --warn-bg: rgba(217, 164, 65, 0.12);
+  --font-display: "Oswald", sans-serif;
+  --font-mono: "Space Mono", monospace;
+  --font-body: "Inter", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  overscroll-behavior-x: none; /* que el swipe no dispare "volver atrás" del navegador */
+  /* Resguardo: si algo en el árbol se pasa de ancho por cualquier motivo
+     que no cubrimos con min-width:0 en los contenedores, esto evita que
+     toda la página quede con scroll horizontal en mobile. */
+  overflow-x: hidden;
+  width: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  /* PWA instalada a pantalla completa (viewport-fit=cover + status bar
+     translúcida en iOS): sin esto el contenido dibuja debajo del notch en
+     landscape y el home-indicator tapa lo último del scroll. env()
+     resuelve a 0 en cualquier navegador/dispositivo sin área segura, así
+     que esto no le cambia nada al 99% de las visitas de escritorio. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Fuera de pantalla hasta que se enfoca con teclado (primer Tab de la
+   página) — deja saltar directo al contenido sin recorrer sidebar, logo,
+   buscador y paginador de fecha en cada visita. */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 12px;
+  z-index: 100;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 10px 16px;
+  border-radius: 8px;
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+  top: 12px;
+}
+
+/* Visualmente oculto pero legible por lectores de pantalla — labels y
+   anuncios que no necesitan espacio en el layout visual. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: var(--text);
+}
+
+/* Foco visible propio en vez del azul default del navegador — solo con
+   teclado (:focus-visible), para no dejar un anillo permanente en cada
+   tap/click táctil o de mouse. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   Layout general: sidebar de ligas + contenido
+   ============================================================ */
+
+.app-shell {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  min-width: 0; /* clave para el fix de ancho en mobile, ver nota abajo */
+}
+
+/* FIX DE ANCHO EN MOBILE: por default, un hijo flex no se achica más
+   allá del ancho de su contenido (min-width:auto implícito). Si adentro
+   hay algo ancho (la tabla de posiciones, por ejemplo), todo el layout se
+   estira más allá del viewport y aparece scroll horizontal en toda la
+   página, aunque ese elemento puntual ya tenga su propio overflow-x:auto.
+   Forzar min-width:0 en toda la cadena de contenedores deja que el
+   overflow interno haga su trabajo como corresponde. */
+.wrap,
+.team-detail,
+.match-detail,
+.feed-viewport,
+.feed-slide {
+  min-width: 0;
+}
+
+.wrap {
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 0 60px;
+}
+
+/* --- Botón hamburguesa (solo mobile, abre el cajón de ligas) --- */
+.hamburger-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px; /* objetivo táctil mínimo recomendado (44x44) */
+  height: 44px;
+  font-size: 18px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.hamburger-btn:hover {
+  border-color: var(--text-dimmer);
+  background: var(--bg-card);
+}
+
+.hamburger-btn:active {
+  transform: scale(0.92);
+}
+
+/* --- Fondo oscuro detrás del cajón, en mobile --- */
+.sidebar-backdrop {
+  display: none;
+}
+
+.sidebar-backdrop.visible {
+  display: block;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 40;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* --- Sidebar de ligas: cajón deslizable en mobile --- */
+.league-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(82vw, 300px);
+  background: var(--bg-strip);
+  border-right: 1px solid var(--line);
+  z-index: 50;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  /* Fixed, pegado a los tres bordes: necesita su propio inset de notch
+     (arriba), home-indicator (abajo) y borde curvo (izquierda, cuando el
+     teléfono está en landscape) — el padding del body no lo alcanza. */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+}
+
+.league-sidebar.open {
+  transform: translateX(0);
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.4);
+}
+
+.league-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.league-sidebar-title-mobile {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+}
+
+.league-sidebar-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.league-sidebar-close:hover {
+  color: var(--text);
+  border-color: var(--text-dimmer);
+  transform: rotate(90deg);
+}
+
+/* --- Buscador de competencias (sidebar) --- */
+.sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 14px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.sidebar-search-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--text-dimmer);
+}
+
+.sidebar-search-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+}
+
+.sidebar-search-input::placeholder {
+  color: var(--text-dimmer);
+}
+
+.sidebar-search-input:focus {
+  outline: none;
+}
+
+.sidebar-search-empty {
+  padding: 8px 14px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--text-dimmer);
+  list-style: none;
+}
+
+.competition-row-context {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dimmer);
+  flex-shrink: 0;
+}
+
+/* --- Favoritos (sidebar): ligas y equipos marcados con la estrella --- */
+.sidebar-favorites {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+
+.region-header-static {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 12px 14px 8px;
+}
+
+.favorites-star {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.sidebar-favorites-empty {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text-dimmer);
+  padding: 0 14px 4px;
+}
+
+.favorite-crest {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 7.5px;
+  color: #141416;
+  overflow: hidden;
+}
+
+.favorite-crest-img {
+  background: #ffffff;
+  border: 1px solid var(--line);
+}
+
+.favorite-crest-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* --- Acordeón por región --- */
+.region-group {
+  border-bottom: 1px solid var(--line);
+}
+
+.region-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.region-header:hover {
+  color: var(--text);
+  background: var(--bg-card);
+}
+
+.region-header .chevron {
+  transition: transform 0.2s ease;
+  font-size: 10px;
+  color: var(--text-dimmer);
+}
+
+.region-header .chevron.open {
+  transform: rotate(180deg);
+}
+
+.region-header-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Un país o una organización continental (CONMEBOL, UEFA...) dentro de
+   una región ya abierta — un escalón más chico y menos gritado que el
+   header de región (sin mayúsculas, sin letter-spacing), para que la
+   jerarquía Región > País se lea de un vistazo. */
+.sidebar-region-body {
+  padding-left: 8px;
+}
+
+.country-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: calc(100% - 8px);
+  margin-left: 8px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.country-header:hover {
+  color: var(--text);
+  background: var(--bg-card);
+}
+
+.country-header .chevron {
+  transition: transform 0.2s ease;
+  font-size: 9px;
+  color: var(--text-dimmer);
+  flex-shrink: 0;
+}
+
+.country-header .chevron.open {
+  transform: rotate(180deg);
+}
+
+.country-header-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+/* Las competencias que cuelgan de un país/organización van un escalón
+   más adentro todavía que las que cuelgan directo de una región (ej. el
+   Mundial bajo "Internacional") — la indentación progresiva es la única
+   señal de jerarquía que necesita este árbol, sin líneas ni cajas
+   anidadas. */
+.sidebar-country .sidebar-competitions {
+  padding-left: 16px;
+}
+
+.competition-row.active .active-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.competition-row:hover {
+  color: var(--accent);
+  transform: translateX(3px);
+}
+
+.league-sidebar ul {
+  list-style: none;
+  padding: 0 8px 8px;
+}
+
+.league-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 12px;
+  margin-bottom: 2px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease,
+    box-shadow 0.15s ease;
+}
+
+.league-sidebar-item:hover {
+  color: var(--text);
+  background: var(--bg-card-hover);
+  transform: translateX(2px);
+}
+
+.league-sidebar-item:active {
+  transform: translateX(2px) scale(0.98);
+}
+
+.league-sidebar-item.active {
+  color: var(--accent-text);
+  background: var(--accent);
+  box-shadow: 0 2px 10px var(--accent-dim);
+}
+
+/* Celular acostado: la altura es el recurso escaso, no el ancho. El
+   header (logo + buscador + paginador de fecha) ya ocupa buena parte de
+   una pantalla de ~360-400px de alto en landscape. */
+@media (max-height: 480px) and (orientation: landscape) {
+  header {
+    padding-top: calc(10px + env(safe-area-inset-top));
+  }
+
+  .logo-row {
+    margin-bottom: 8px;
+  }
+}
+
+/* Desktop: la sidebar deja de ser un cajón flotante y pasa a ser una
+   columna fija de siempre, sin backdrop ni botón hamburguesa. */
+@media (min-width: 900px) {
+  .app-shell {
+    align-items: flex-start;
+    gap: 24px;
+    max-width: 980px;
+    margin: 0 auto;
+    padding-top: 24px;
+  }
+
+  .hamburger-btn,
+  .league-sidebar-close,
+  .league-sidebar-header {
+    display: none;
+  }
+
+  .sidebar-backdrop {
+    display: none !important;
+  }
+
+  .league-sidebar {
+    position: sticky;
+    top: 24px;
+    left: auto;
+    bottom: auto;
+    width: 220px;
+    flex-shrink: 0;
+    min-width: 0;
+    max-height: calc(100vh - 48px);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    transform: none;
+  }
+}
+
+/* ============================================================
+   Header
+   ============================================================ */
+
+header {
+  /* position:sticky ancla al borde del viewport, así que el inset del
+     notch va acá adentro (padding del body no alcanza a un elemento
+     sticky/fixed) — mismo motivo que el sidebar más abajo. */
+  padding: calc(20px + env(safe-area-inset-top)) 18px 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.logo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.logo-btn {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0;
+}
+
+.logo-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px; /* mismo esquinado redondeado que el ícono original */
+  box-shadow: 0 0 12px rgba(44, 105, 210, 0.5);
+}
+
+/* --- Botón "Instalar app" (topbar, solo si beforeinstallprompt disparó) --- */
+.install-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 8px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.install-btn svg {
+  font-size: 13px;
+}
+
+.install-btn:hover {
+  color: var(--text);
+  border-color: var(--text-dimmer);
+  background: var(--bg-card);
+}
+
+/* En pantallas angostas la fila del logo ya está justa (hamburguesa +
+   ícono + wordmark) — el botón de instalar pasa a solo ícono en vez de
+   forzar overflow o achicar el resto de la fila. */
+@media (max-width: 420px) {
+  .install-btn span {
+    display: none;
+  }
+
+  .install-btn {
+    padding: 8px;
+  }
+}
+
+/* --- Control segmentado Todos/En vivo/Favoritos del feed del día --- */
+.feed-filter-group {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+
+.feed-filter-btn {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.feed-filter-btn:hover {
+  color: var(--text);
+  border-color: var(--text-dimmer);
+}
+
+.feed-filter-btn.active {
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+/* El fondo del botón activo es un motion.span con layoutId compartido
+   entre los tres botones (ver DayFeedPage.jsx) — Motion anima la
+   posición/ancho de ESTE elemento entre renders aunque el DOM de cada
+   botón sea distinto, dando el efecto de indicador deslizante en vez de
+   un salto de color instantáneo. -1px de inset tapa el borde de 1px del
+   botón (que ya pasa a accent cuando está activo, así no se nota la
+   costura). */
+.feed-filter-pill {
+  position: absolute;
+  inset: -1px;
+  background: var(--accent);
+  border-radius: 16px;
+  z-index: 0;
+}
+
+.feed-filter-label {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- Buscador --- */
+.search-box {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.search-input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg-strip);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.search-input::placeholder {
+  color: var(--text-dimmer);
+}
+
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  z-index: 20;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.search-msg {
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.search-group-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  padding: 10px 12px 4px;
+}
+
+.search-result {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.search-result-static {
+  cursor: default;
+}
+
+.search-result:hover,
+.search-result.highlighted {
+  background: var(--bg-card-hover);
+}
+
+.search-result img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 50%;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.search-result-country {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dimmer);
+  flex-shrink: 0;
+}
+
+/* --- Botón de favorito (estrella) --- */
+.fav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px; /* antes ~24px de área clickeable (16px + 4px padding) */
+  min-height: 32px;
+  background: transparent;
+  border: none;
+  color: var(--text-dimmer);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+  flex-shrink: 0;
+  transition: color 0.15s ease, transform 0.1s ease;
+}
+
+.fav-btn:hover {
+  color: var(--accent);
+  transform: scale(1.15);
+}
+
+.fav-btn.active {
+  color: var(--accent);
+}
+
+.fav-btn.lg {
+  font-size: 26px;
+}
+
+/* --- Paginador de días --- */
+.day-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.day-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px; /* antes 30px — objetivo táctil más cómodo para una acción frecuente */
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.day-arrow:hover {
+  color: var(--text);
+  border-color: var(--text-dimmer);
+}
+
+.date-strip {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px 2px 14px;
+}
+
+.date-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.date-chip {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  background: var(--bg-strip);
+  border: 1px solid var(--line);
+  padding: 8px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.date-chip:hover {
+  color: var(--text);
+  border-color: var(--text-dimmer);
+  transform: translateY(-1px);
+}
+
+.date-chip.active {
+  color: var(--accent-text);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* --- Contenedor con swipe --- */
+.feed-viewport {
+  overflow: hidden;
+  padding: 0 18px;
+  touch-action: pan-y;
+}
+
+.feed-slide {
+  animation: slideIn 0.22s ease;
+}
+
+.feed-slide.from-right {
+  animation-name: slideInFromRight;
+}
+.feed-slide.from-left {
+  animation-name: slideInFromLeft;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.day-heading {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--text-dimmer);
+  margin: 18px 0 4px;
+}
+
+/* Más presente que el resto del heading (--text-dimmer): es un dato, no
+   solo un rótulo, pero se mantiene neutro a propósito — nunca acento ni
+   live-red, para no fabricar urgencia. */
+.match-count {
+  color: var(--text-dim);
+}
+
+/* --- Chip de filtro activo (sidebar -> "solo esta liga") --- */
+.league-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent-text);
+  background: var(--accent);
+  padding: 6px 8px 6px 14px;
+  border-radius: 16px;
+  margin: 10px 0 4px;
+}
+
+.league-filter-chip button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: inherit;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.league-bar {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text);
+  margin: 22px 0 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* Nombres de liga largos ("DIVISION PROFESIONAL - CLAUSURA") envuelven a
+   dos líneas en vez de angostar la estrella o desbordar — line-height
+   propio para que esas dos líneas en mayúscula tracked no queden
+   pegadas entre sí. */
+.league-bar span {
+  line-height: 1.35;
+}
+
+.league-bar-link {
+  line-height: 1.35;
+  color: inherit;
+  text-decoration: none;
+}
+
+.league-bar-link:hover {
+  color: var(--accent);
+}
+
+.match {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  /* El levantamiento/escala al hover-tap lo maneja Motion (HoverCard,
+     ver src/motion/) con transform inline — CSS solo se ocupa de lo que
+     Motion no toca (fondo, borde, sombra), para no declarar "transform"
+     en dos lugares a la vez con mecanismos distintos peleando por el
+     mismo estilo inline. */
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.match:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--text-dimmer);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.match:active {
+  box-shadow: none;
+}
+
+/* --- Skeleton de carga (SkeletonLoader) --- */
+.skeleton-card {
+  cursor: default;
+  pointer-events: none;
+}
+
+.skeleton {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(
+    100deg,
+    var(--bg-card-hover) 30%,
+    rgba(255, 255, 255, 0.08) 50%,
+    var(--bg-card-hover) 70%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 150% 0;
+  }
+  100% {
+    background-position: -50% 0;
+  }
+}
+
+.skeleton-crest {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-name {
+  width: 72px;
+  height: 13px;
+  margin-left: 10px;
+}
+
+.side.away .skeleton-name {
+  margin-left: 0;
+  margin-right: 10px;
+}
+
+.skeleton-score {
+  width: 48px;
+  height: 18px;
+}
+
+.skeleton-league-name {
+  width: 120px;
+  height: 13px;
+}
+
+.skeleton-group {
+  margin-bottom: 4px;
+}
+
+/* Quien prefiere menos movimiento tampoco necesita el shimmer corriendo
+   sin parar — el skeleton sigue comunicando "esto está cargando" solo
+   con su forma/color, sin la animación. */
+/* MotionConfig reducedMotion="user" (main.jsx) ya cubre todo lo animado
+   con Motion, pero estas son @keyframes de CSS plano — Motion no las ve.
+   fadeIn/slideIn* son solo opacity/transform (bajo riesgo vestibular) y
+   se desactivan igual por consistencia; el pulso del punto "en vivo" es
+   la única de estas tres que además queda expuesta más de 5s de forma
+   automática (WCAG 2.2.2), así que es la que más lo necesita. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .sidebar-backdrop.visible,
+  .feed-slide,
+  .status-badge.live .blip,
+  .live-dot {
+    animation: none;
+  }
+}
+
+.match-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.side {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.side.away {
+  flex-direction: row-reverse;
+}
+
+.side-clickable {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.side.away .side-clickable {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.crest {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11px;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: transform 0.15s ease;
+}
+
+/* El escudo es la parte "de marca" del equipo, la que más vale la
+   pena resaltar al pasar el mouse — un scale sutil en vez de tocar
+   toda la fila (eso ya lo cubre el hover de la card entera). */
+.side-clickable:hover .crest {
+  transform: scale(1.08);
+}
+
+/* Escudo real: fondo blanco fijo (los escudos suelen tener partes
+   transparentes, así se ven bien contra el fondo oscuro de la tarjeta) */
+.crest-img {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  padding: 4px;
+}
+
+.crest-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Fallback con iniciales, cuando no hay escudo o no cargó */
+.crest-fallback {
+  color: #141416;
+}
+
+.team-name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 90px;
+}
+
+.score {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* AnimatedScore: grid de una sola celda para que el número saliente y el
+   entrante se superpongan durante el crossfade sin empujar el "-" de al
+   lado ni el resto de la tarjeta. */
+.animated-score {
+  display: inline-grid;
+  min-width: 1ch;
+}
+
+.animated-score-value {
+  grid-area: 1 / 1;
+}
+
+.status-badge {
+  font-family: var(--font-mono);
+  font-size: 11px; /* antes 9.5px — por debajo del piso legible para texto funcional, y se repite en cada partido del feed */
+  letter-spacing: 1px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-badge.scheduled {
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+}
+
+.status-badge.final {
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* En un teléfono angosto, escudo (32px) + estrella (32px) + separadores
+   dejaban apenas ~14px para el NOMBRE del equipo — la información más
+   importante de la card, por delante hasta del propio resultado en la
+   jerarquía que pide este proyecto (Scores > Match status > Teams > ...).
+   Achicar un poco escudo/estrella/badge de hora en mobile le devuelve
+   al nombre un ancho real donde mostrar algo más que una letra. */
+@media (max-width: 480px) {
+  .side .crest {
+    width: 26px;
+    height: 26px;
+  }
+
+  .side .fav-btn {
+    min-width: 24px;
+    min-height: 24px;
+    padding: 2px;
+  }
+
+  .side-clickable {
+    gap: 6px;
+  }
+
+  .side {
+    gap: 2px;
+  }
+
+  .center {
+    min-width: 0;
+  }
+
+  .status-badge {
+    padding: 2px 5px;
+    letter-spacing: 0.3px;
+  }
+}
+
+.status-badge.live {
+  color: var(--accent-text);
+  background: var(--live);
+  border: 1px solid var(--live);
+}
+
+.status-badge.live .blip {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-text);
+  margin-right: 4px;
+  animation: pulse 1.1s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.prob {
+  margin-top: 12px;
+}
+
+.prob-bar {
+  display: flex;
+  height: 5px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--line);
+}
+
+.prob-bar .home {
+  background: var(--accent);
+}
+
+.prob-bar .draw {
+  background: var(--text-dimmer);
+}
+
+.prob-bar .away {
+  background: var(--gray-mid);
+}
+
+.prob-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.prediction-advice {
+  margin-top: 10px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.prediction-disclaimer {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-dimmer);
+  text-align: center;
+}
+
+/* --- Meta del partido: stage/round, clima, asistencia, árbitro,
+   estadio, DTs (MatchDetail) --- */
+.match-meta {
+  margin: 10px 0 4px;
+}
+
+.match-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.match-meta-officials {
+  font-size: 10.5px;
+  color: var(--text-dimmer);
+}
+
+.match-meta-link {
+  color: var(--text-dim);
+  text-decoration: none;
+}
+
+.match-meta-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.referee-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+.match-meta-weather {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* --- Tabs del match center --- */
+.match-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  margin: 16px 0;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.match-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.match-tab {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 8px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.match-tab:hover {
+  color: var(--text);
+  border-color: var(--text-dimmer);
+}
+
+.match-tab.active {
+  color: var(--accent-text);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* --- Línea de tiempo de eventos (MatchEvents) --- */
+.match-events-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.match-event-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.match-event-minute {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dimmer);
+  width: 32px;
+  flex-shrink: 0;
+}
+
+.match-event-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.match-event-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.match-event-player {
+  color: var(--text);
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.match-event-player:hover {
+  color: var(--accent);
+}
+
+.match-event-detail {
+  font-size: 11px;
+  color: var(--text-dimmer);
+}
+
+.match-event-away {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.match-event-away .match-event-body {
+  align-items: flex-end;
+}
+
+.match-event-period {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  background: var(--bg-card);
+  border-radius: 8px;
+  margin: 4px 0;
+}
+
+.match-event-period-score {
+  color: var(--text);
+}
+
+/* --- H2H (MatchH2H) --- */
+.h2h-summary {
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+  margin: 12px 0;
+}
+
+.h2h-summary-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.h2h-summary-value {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.h2h-summary-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  max-width: 90px;
+}
+
+.h2h-goals {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+.h2h-recent-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.h2h-recent-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+}
+
+.h2h-recent-date {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dimmer);
+  flex-shrink: 0;
+}
+
+.h2h-recent-teams {
+  color: var(--text-dim);
+}
+
+.h2h-recent-teams strong {
+  color: var(--text);
+}
+
+.h2h-recent-time {
+  font-family: var(--font-mono);
+  color: var(--text-dimmer);
+}
+
+.h2h-recent-competition {
+  color: var(--text-dimmer);
+  font-size: 11px;
+}
+
+/* --- Forma reciente (MatchH2H, FormStrip) --- */
+.form-strip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.form-strip-team {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.form-strip-chips {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.form-chip {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #141416;
+  cursor: default;
+}
+
+.form-chip-W {
+  background: #50c878;
+}
+
+.form-chip-D {
+  background: var(--text-dimmer);
+}
+
+.form-chip-L {
+  background: #d9463d;
+  color: #ffffff;
+}
+
+/* --- Estadísticas por jugador (MatchPlayerStats) --- */
+.player-stats-table {
+  margin-bottom: 20px;
+}
+
+.player-stats-team-title {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  margin-bottom: 8px;
+}
+
+.player-stats-header,
+.player-stats-row {
+  display: grid;
+  grid-template-columns: 1fr repeat(5, 40px);
+  align-items: center;
+  gap: 4px;
+}
+
+.player-stats-header {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.player-stats-sort {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dimmer);
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  text-align: center;
+}
+
+.player-stats-sort:hover {
+  color: var(--text-dim);
+}
+
+.player-stats-sort.active {
+  color: var(--accent);
+}
+
+.player-stats-list {
+  list-style: none;
+}
+
+.player-stats-row {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.player-stats-row-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text);
+  font-size: 12.5px;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-stats-row-name:hover {
+  color: var(--accent);
+}
+
+.player-stats-cell {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .player-stats-header,
+  .player-stats-row {
+    grid-template-columns: 1fr repeat(5, 30px);
+    font-size: 10px;
+  }
+}
+
+/* --- xG / shotmap (MatchShotmap) --- */
+.xg-estimated-tag {
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  background: var(--bg-card);
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+.xg-total-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 18px;
+}
+
+.xg-total-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.shotmap-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.shotmap-column-title {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shot-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shot-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+}
+
+.shot-row-goal {
+  background: rgba(80, 200, 120, 0.08);
+  border-radius: 6px;
+}
+
+.shot-minute {
+  font-family: var(--font-mono);
+  color: var(--text-dimmer);
+  width: 30px;
+  flex-shrink: 0;
+}
+
+.shot-player {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.shot-player:hover {
+  color: var(--accent);
+}
+
+.shot-xg {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.shot-result {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.shot-result-goal {
+  color: #50c878;
+}
+
+.shot-result-miss,
+.shot-result-save,
+.shot-result-block {
+  color: var(--text-dimmer);
+}
+
+@media (max-width: 480px) {
+  .shotmap-columns {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+.empty,
+.error-banner {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-top: 24px;
+}
+
+/* Empty state de un filtro (En vivo / Favoritos) sin resultados — a
+   diferencia de .error-state, esto no es una falla, así que el botón de
+   salida es un pill ghost, no el CTA de acento. */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.empty-state .empty {
+  margin-top: 24px;
+}
+
+.empty-state-action {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.empty-state-action:hover {
+  color: var(--text);
+  border-color: var(--text-dimmer);
+}
+
+.error-banner {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* Aviso de que se están mostrando datos cacheados (se agotó la cuota
+   diaria de la API, o se cayó la conexión) — mismo dato que ya calculaba
+   el backend (`stale: true`), antes se descartaba en el frontend. */
+.stale-banner,
+.offline-banner {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--warn);
+  background: var(--warn-bg);
+  border: 1px solid rgba(217, 164, 65, 0.35);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.stale-banner {
+  margin: 10px 0 4px;
+}
+
+/* A diferencia de .stale-banner (vive dentro de .feed-viewport, que ya
+   tiene padding horizontal de 18px), este banner cuelga directo de
+   .wrap y necesita su propio margen lateral. */
+.offline-banner {
+  margin: 10px 18px 4px;
+}
+
+/* Cartel de error amigable con botón de reintentar (feed del día) */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  margin-top: 48px;
+  padding: 24px 20px;
+}
+
+.error-state-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.error-state-subtitle {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+.error-state-retry {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--accent-text);
+  background: var(--accent);
+  border: none;
+  padding: 9px 20px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.error-state-retry:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px var(--accent-dim);
+}
+
+.error-state-retry:active {
+  transform: translateY(0);
+}
+
+footer {
+  margin-top: 30px;
+  padding: 0 18px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dimmer);
+  text-align: center;
+}
+
+/* ============================================================
+   Ficha de equipo (TeamDetail)
+   ============================================================ */
+
+.team-detail,
+.player-detail {
+  padding: 0 18px 60px;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 16px 0;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 7px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.back-btn:hover {
+  color: var(--text);
+  border-color: var(--text-dimmer);
+  transform: translateX(-2px);
+}
+
+/* La "impronta" del club: un degradé sutil con su color hash (mismo que
+   usa el escudo de respaldo) detrás del header — no todos los clubes
+   tienen colores de marca cargados en la API, así que este es un color
+   que SIEMPRE existe y es estable para ese club entre visitas. */
+.team-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: -16px -18px 24px;
+  padding: 24px 18px 20px;
+  background: var(--bg-card); /* respaldo si el navegador no soporta color-mix() */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--identity-color) 28%, var(--bg)), var(--bg));
+  border-bottom: 1px solid var(--line);
+}
+
+.team-header-crest {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  padding: 8px;
+  flex-shrink: 0;
+}
+
+.team-header-crest img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.team-header-info {
+  min-width: 0;
+}
+
+.team-header-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-header-name-row h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--text);
+}
+
+.team-header-meta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+/* --- Próximo partido (TeamDetail) --- */
+.next-match-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.next-match-card:hover {
+  background: var(--bg-card-hover);
+}
+
+.next-match-crest {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ffffff;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #141416;
+}
+
+.next-match-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.next-match-vs {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.next-match-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.3px;
+  color: var(--text-dimmer);
+}
+
+/* --- Ficha de jugador (PlayerDetail) --- */
+.player-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: -16px -18px 24px;
+  padding: 24px 18px 20px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--line);
+}
+
+.player-header-info {
+  min-width: 0;
+}
+
+.player-header-info h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--text);
+}
+
+.player-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.player-header-team {
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.player-header-team:hover {
+  text-decoration: underline;
+}
+
+.player-availability {
+  display: inline-block;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 3px 9px;
+  border-radius: 10px;
+}
+
+.player-availability-injured {
+  color: #d9463d;
+  background: rgba(217, 70, 61, 0.12);
+}
+
+.player-availability-suspended {
+  color: #e8c547;
+  background: rgba(232, 197, 71, 0.12);
+}
+
+.player-availability-doubtful {
+  color: var(--text-dim);
+  background: var(--bg);
+}
+
+.player-facts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.player-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.player-fact span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dimmer);
+}
+
+.player-fact strong {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.player-stats-sample {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dimmer);
+  font-weight: 400;
+  text-transform: none;
+}
+
+.player-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 10px;
+}
+
+.player-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.player-stat-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+}
+
+.player-stat-label {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.team-section {
+  margin-bottom: 28px;
+}
+
+/* --- Ficha de competencia (CompetitionDetail) --- */
+.competition-detail {
+  padding: 0 18px 60px;
+}
+
+.competition-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: -16px -18px 20px;
+  padding: 24px 18px 20px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--line);
+}
+
+.competition-header-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  padding: 8px;
+  flex-shrink: 0;
+}
+
+.competition-header-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.competition-header h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 19px;
+  color: var(--text);
+}
+
+.competition-header-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.season-select-wrap {
+  display: block;
+  margin: 0 0 16px;
+}
+
+.season-select {
+  width: 100%;
+  max-width: 220px;
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.season-select:hover {
+  border-color: var(--accent);
+}
+
+.team-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.team-link:hover {
+  color: var(--accent);
+}
+
+/* --- Tabla de posiciones (StandingsTable) --- */
+.standings-table-wrap {
+  margin-bottom: 24px;
+}
+
+.standings-group-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.standings-scroll {
+  overflow-x: auto;
+}
+
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.standings-table th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dimmer);
+  text-align: center;
+  padding: 6px 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.standings-table td {
+  text-align: center;
+  padding: 7px 6px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-dim);
+}
+
+.standings-row-highlight {
+  background: var(--accent-dim);
+}
+
+.standings-row-highlight td {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.standings-team-col {
+  text-align: left !important;
+  min-width: 160px;
+}
+
+.standings-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.standings-crest {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.standings-pts {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.standings-form-col {
+  text-align: left !important;
+}
+
+.standings-form {
+  display: flex;
+  gap: 2px;
+}
+
+.form-chip-sm {
+  width: 15px;
+  height: 15px;
+  font-size: 8px;
+}
+
+.standings-zone-qualification td:first-child,
+.standings-zone-relegation td:first-child,
+.standings-zone-playoff td:first-child {
+  position: relative;
+}
+
+.standings-zone-qualification td:first-child::before,
+.standings-zone-relegation td:first-child::before,
+.standings-zone-playoff td:first-child::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+}
+
+.standings-zone-qualification td:first-child::before {
+  background: #50c878;
+}
+
+.standings-zone-relegation td:first-child::before {
+  background: #d9463d;
+}
+
+.standings-zone-playoff td:first-child::before {
+  background: #e8c547;
+}
+
+.standings-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 10.5px;
+  color: var(--text-dimmer);
+}
+
+.standings-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.standings-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.standings-zone-qualification .standings-legend-dot {
+  background: #50c878;
+}
+
+.standings-zone-relegation .standings-legend-dot {
+  background: #d9463d;
+}
+
+.standings-zone-playoff .standings-legend-dot {
+  background: #e8c547;
+}
+
+/* --- Goleadores / asistencias (Leaderboard) --- */
+.leaderboard-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.leaderboard-rank {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dimmer);
+  width: 20px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.leaderboard-player {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.leaderboard-player-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.leaderboard-player-name {
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leaderboard-player:hover .leaderboard-player-name {
+  color: var(--accent);
+}
+
+.leaderboard-team {
+  font-size: 10.5px;
+  color: var(--text-dimmer);
+  text-decoration: none;
+}
+
+.leaderboard-team:hover {
+  color: var(--text-dim);
+}
+
+.leaderboard-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.team-section-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+}
+
+/* --- Estadísticas de tabla --- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.stat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 6px;
+  text-align: center;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.stat-box:hover {
+  transform: translateY(-2px);
+  border-color: var(--text-dimmer);
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.3px;
+  color: var(--text-dimmer);
+  margin-top: 3px;
+  text-transform: uppercase;
+}
+
+/* --- Alineación en vivo / probable / de un partido --- */
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--live);
+  margin-right: 6px;
+  animation: pulse 1.1s infinite;
+}
+
+/* --- Cancha con formación (LineupPitch) --- */
+.lineup-pitch-wrap {
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.lineup-side-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.lineup-side-tab {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 8px 6px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lineup-side-tab:hover {
+  color: var(--text);
+  border-color: var(--text-dimmer);
+}
+
+.lineup-side-tab.active {
+  color: var(--accent-text);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.pitch {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background: linear-gradient(180deg, #1c6b3a, #164f2c);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.pitch::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 4%;
+  right: 4%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.pitch::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22%;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pitch-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 60px;
+}
+
+.pitch-player-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.pitch-player-face-wrap {
+  position: relative;
+}
+
+.pitch-player-number {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 9px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px var(--bg-card);
+}
+
+.pitch-player-name {
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  color: #ffffff;
+  text-align: center;
+  line-height: 1.15;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+}
+
+/* --- Badges de eventos sobre un jugador (gol/tarjeta/cambio) --- */
+.player-badges {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  display: flex;
+  gap: 2px;
+}
+
+.player-badge {
+  font-size: 9px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+
+.player-badge-yellow,
+.player-badge-red {
+  width: 8px;
+  height: 11px;
+  border-radius: 1.5px;
+}
+
+.player-badge-yellow {
+  background: #e8c547;
+}
+
+.player-badge-red {
+  background: #d9463d;
+}
+
+.player-badge-sub-out {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-dimmer);
+  background: var(--bg-card);
+  border-radius: 4px;
+  padding: 0 3px;
+}
+
+.player-badge-sub-in {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-left: auto;
+}
+
+.lineup-fallback-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.lineup-player {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.lineup-player-number {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--text-dim);
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.lineup-player-name {
+  flex: 1;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lineup-player-position {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dimmer);
+  flex-shrink: 0;
+}
+
+/* --- Banco de suplentes / bajas (LineupPitch) --- */
+.lineup-bench,
+.lineup-unavailable {
+  margin-top: 18px;
+}
+
+.lineup-bench-title {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  margin-bottom: 8px;
+}
+
+.lineup-bench-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lineup-bench-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+
+.lineup-bench-player:hover {
+  background: var(--bg-card-hover);
+}
+
+.lineup-bench-info {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lineup-bench-number {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dimmer);
+  flex-shrink: 0;
+}
+
+.lineup-bench-name {
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lineup-unavailable ul {
+  list-style: none;
+}
+
+.unavailable-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.unavailable-name {
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.unavailable-name:hover {
+  color: var(--accent);
+}
+
+.unavailable-status {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.unavailable-injured .unavailable-status {
+  color: #d9463d;
+  background: rgba(217, 70, 61, 0.12);
+}
+
+.unavailable-suspended .unavailable-status {
+  color: #e8c547;
+  background: rgba(232, 197, 71, 0.12);
+}
+
+.unavailable-doubtful .unavailable-status {
+  color: var(--text-dim);
+  background: var(--bg-card);
+}
+
+/* --- Plantel --- */
+.squad-position-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  margin: 16px 0 8px;
+}
+
+.squad-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 12px;
+}
+
+.squad-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.squad-player-photo {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  margin-bottom: 6px;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.squad-player:hover .squad-player-photo {
+  box-shadow: 0 0 0 2px var(--accent);
+  transform: scale(1.05);
+}
+
+.squad-player-photo .player-face {
+  width: 100%;
+  height: 100%;
+  font-size: 16px;
+}
+
+.squad-player-photo .player-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* --- PlayerFace: foto de jugador con respaldo de iniciales, mismo
+   patrón que el escudo de equipo. Reusado en cancha táctica, banco,
+   plantel, eventos del partido y la ficha de jugador — una sola
+   identidad visual en toda la app. --- */
+.player-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: #141416;
+}
+
+.player-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.player-face-sm {
+  width: 28px;
+  height: 28px;
+  font-size: 10px;
+}
+
+.player-face-md {
+  width: 40px;
+  height: 40px;
+  font-size: 12px;
+  background: var(--bg-card);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.player-face-lg {
+  width: 56px;
+  height: 56px;
+  font-size: 16px;
+}
+
+.player-face-xl {
+  width: 88px;
+  height: 88px;
+  font-size: 24px;
+}
+
+.player-face-fallback {
+  color: #141416;
+}
+
+.squad-player-number {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 9px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.squad-player-name {
+  font-size: 11.5px;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.squad-player-age {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--text-dimmer);
+  margin-top: 2px;
+}
+
+
+/* ============================================================
+   Detalle de partido (estadísticas + alineación)
+   ============================================================ */
+
+.match-detail {
+  padding: 0 18px 60px;
+}
+
+.match-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 26px;
+}
+
+.match-detail-team {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.match-detail-team .crest {
+  width: 48px;
+  height: 48px;
+  font-size: 14px;
+}
+
+.match-detail-team-name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text);
+  text-align: center;
+}
+
+.match-detail-score {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 24px;
+  color: var(--text);
+  text-align: center;
+  min-width: 90px;
+}
+
+.match-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.match-stat-row {
+  display: grid;
+  grid-template-columns: 50px 1fr 50px;
+  align-items: center;
+  gap: 10px 10px;
+}
+
+/* Barra comparativa debajo de cada fila — mismo lenguaje visual que
+   .prob-bar (predicciones): dos segmentos lado a lado, cada uno
+   proporcional a su parte del total entre los dos equipos. Ocupa las 3
+   columnas de la fila (grid-column: 1/-1) en una segunda línea implícita. */
+.stat-bar-track {
+  grid-column: 1 / -1;
+  display: flex;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--line);
+}
+
+.stat-bar-home {
+  background: var(--accent);
+}
+
+.stat-bar-away {
+  background: var(--gray-mid);
+}
+
+.match-stat-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  text-align: center;
+}
+
+.header-nav-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 8px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-nav-btn:hover {
+  color: var(--text);
+  border-color: var(--text-dimmer);
+  background: var(--bg-card);
+}
+
+@media (max-width: 560px) {
+  .header-nav-btn {
+    display: none;
+  }
+}
+
+/* --- Página de fichajes --- */
+.transfers-page {
+  padding: 20px 18px 60px;
+}
+
+.transfers-heading {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.transfers-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.transfers-filter-select {
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.transfers-filter-select:hover {
+  border-color: var(--accent);
+}
+
+.transfers-filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.transfers-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.transfer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 4px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.transfer-date {
+  flex: 0 0 56px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dimmer);
+  white-space: nowrap;
+}
+
+.transfer-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 500;
+  min-width: 0;
+  flex: 1 1 160px;
+}
+
+.transfer-player-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transfer-move {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-size: 12px;
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.transfer-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.transfer-team span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transfer-team img {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.transfer-arrow {
+  flex-shrink: 0;
+  color: var(--text-dimmer);
+  font-size: 12px;
+}
+
+.transfer-fee {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--text);
+  white-space: nowrap;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .transfer-date {
+    order: 1;
+  }
+
+  .transfer-fee {
+    order: 2;
+  }
+
+  .transfer-player {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .transfer-move {
+    order: 4;
+    flex-basis: 100%;
+  }
+}
+
+.transfers-load-more {
+  display: block;
+  margin: 18px auto 0;
+  padding: 10px 22px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.transfers-load-more:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.transfers-load-more:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.match-stat-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dimmer);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* --- Comparar (jugadores / equipos) --- */
+.compare-page {
+  padding: 20px 18px 60px;
+}
+
+.compare-heading {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.compare-pickers {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.compare-vs {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dimmer);
+}
+
+.compare-picker {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.compare-picker-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.compare-picker-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.compare-picker-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.compare-picker-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.compare-picker-option:hover {
+  background: var(--bg-card-hover);
+}
+
+.compare-picker-option-team {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-dimmer);
+}
+
+.compare-picker-selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.compare-picker-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.compare-picker-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.compare-picker-info span {
+  font-size: 11px;
+  color: var(--text-dimmer);
+}
+
+.compare-picker-clear {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-dimmer);
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.compare-picker-clear:hover {
+  color: var(--text);
+  background: var(--line);
+}
+
+.compare-league-select-wrap {
+  margin: 16px 0;
+}
+
+.compare-league-select,
+.compare-team-select {
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.compare-team-select {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.compare-heads {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 12px;
+}
+
+.compare-head {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--text);
+}
+
+.compare-head strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  font-size: 14px;
+}
+
+.compare-head-crest {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  object-fit: contain;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.compare-table td {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.compare-value {
+  width: 30%;
+  text-align: center;
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+.compare-winner {
+  color: var(--accent);
+}
+
+.compare-label {
+  width: 40%;
+  text-align: center;
+  color: var(--text-dimmer);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* --- Cuotas (MatchDetail) --- */
+.odds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.odds-market {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.odds-market-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dimmer);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 8px;
+}
+
+.odds-options {
+  display: flex;
+  gap: 8px;
+}
+
+.odds-option {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  background: var(--bg);
+  border-radius: 8px;
+}
+
+.odds-option-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.odds-option-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+}
+
+/* --- Dónde ver (MatchDetail) --- */
+.broadcasts {
+  margin: 10px 0;
+  font-size: 11.5px;
+  text-align: center;
+}
+
+.broadcasts-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.broadcasts-label {
+  font-family: var(--font-mono);
+  color: var(--text-dimmer);
+}
+
+.broadcasts-empty {
+  color: var(--text-dimmer);
+}
+
+.broadcast-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.broadcast-chip {
+  padding: 3px 10px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.broadcast-chip-link {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.broadcast-chip-link:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.broadcasts-toggle {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dimmer);
+  background: transparent;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.broadcasts-toggle:hover {
+  color: var(--text-dim);
+}
+
+.broadcasts-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px auto 0;
+  max-width: 420px;
+  text-align: left;
+}
+
+.broadcasts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.broadcasts-country {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dimmer);
+  flex-shrink: 0;
+}
+
+/* --- Social (MatchDetail) --- */
+.social-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.social-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+}
+
+.social-item:hover {
+  border-color: var(--accent);
+}
+
+.social-item-thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.social-item-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.social-item-play {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 28px;
+  height: 28px;
+  color: #ffffff;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.6));
+}
+
+.social-item-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+}
+
+.social-item-account {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.social-item-account-name {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.social-item-verified {
+  color: var(--accent);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.social-item-time {
+  color: var(--text-dimmer);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.social-item-text {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* --- Momentum (MatchDetail) --- */
+.momentum-chart {
+  display: flex;
+  align-items: stretch;
+  height: 110px;
+  gap: 1px;
+  margin-top: 12px;
+  padding: 0 2px;
+}
+
+.momentum-col {
+  flex: 1;
+  min-width: 1px;
+  display: flex;
+  flex-direction: column;
+}
+
+.momentum-col-top {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--line);
+}
+
+.momentum-col-bottom {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+}
+
+.momentum-bar-home {
+  width: 100%;
+  min-height: 1px;
+  background: var(--accent);
+  border-radius: 1px 1px 0 0;
+}
+
+.momentum-bar-away {
+  width: 100%;
+  min-height: 1px;
+  background: var(--gray-mid);
+  border-radius: 0 0 1px 1px;
+}
+
+.momentum-legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.momentum-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.momentum-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.momentum-legend-dot-home {
+  background: var(--accent);
+}
+
+.momentum-legend-dot-away {
+  background: var(--gray-mid);
+}
+
+/* --- Datos curiosos (MatchDetail) --- */
+.fun-facts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+}
+
+.fun-facts-list li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.fun-facts-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* --- Once ideal (CompetitionDetail) --- */
+.best-xi-season {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dimmer);
+  margin-bottom: 16px;
+}
+
+.best-xi-row {
+  margin-bottom: 20px;
+}
+
+.best-xi-row-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dimmer);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+}
+
+.best-xi-players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.best-xi-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 96px;
+  padding: 10px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+  text-align: center;
+}
+
+.best-xi-player:hover {
+  border-color: var(--accent);
+}
+
+.best-xi-player-name {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.best-xi-player-team {
+  font-size: 10px;
+  color: var(--text-dimmer);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.best-xi-player-rating {
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--accent);
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: var(--accent-dim);
+}
+
+.competition-stats-pending {
+  font-size: 11px;
+  color: var(--text-dimmer);
+  margin: -6px 0 16px;
+}

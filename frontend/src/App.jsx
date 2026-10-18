@@ -1,0 +1,36 @@
+import { Routes, Route, Navigate } from "react-router-dom";
+import { toDateKey } from "./utils";
+import Layout from "./Layout";
+import DayFeedPage from "./pages/DayFeedPage";
+import TeamDetailPage from "./pages/TeamDetailPage";
+import MatchDetailPage from "./pages/MatchDetailPage";
+import PlayerDetailPage from "./pages/PlayerDetailPage";
+import CompetitionDetailPage from "./pages/CompetitionDetailPage";
+import RefereeDetailPage from "./pages/RefereeDetailPage";
+import ManagerDetailPage from "./pages/ManagerDetailPage";
+import VenueDetailPage from "./pages/VenueDetailPage";
+import TransfersPage from "./pages/TransfersPage";
+import ComparePage from "./pages/ComparePage";
+
+const todayKey = toDateKey(new Date());
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Navigate to={`/fecha/${todayKey}`} replace />} />
+        <Route path="fecha/:date" element={<DayFeedPage />} />
+        <Route path="equipo/:id" element={<TeamDetailPage />} />
+        <Route path="partido/:id" element={<MatchDetailPage />} />
+        <Route path="jugador/:id" element={<PlayerDetailPage />} />
+        <Route path="competicion/:id" element={<CompetitionDetailPage />} />
+        <Route path="arbitro/:id" element={<RefereeDetailPage />} />
+        <Route path="entrenador/:id" element={<ManagerDetailPage />} />
+        <Route path="estadio/:id" element={<VenueDetailPage />} />
+        <Route path="transferencias" element={<TransfersPage />} />
+        <Route path="comparar" element={<ComparePage />} />
+        <Route path="*" element={<Navigate to={`/fecha/${todayKey}`} replace />} />
+      </Route>
+    </Routes>
+  );
+}
