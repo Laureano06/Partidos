@@ -1,49 +1,114 @@
-# Marcador — frontend (React + Vite + React Router)
+# Partidos: frontend
+
+[English](#english) · [Español](#español)
+
+---
+
+## English
+
+React 19 + Vite + React Router web app for [partidos.com.ar](https://partidos.com.ar).
+
+### Structure
 
 ```
 src/
-  api.js                 → fetch al backend
-  utils.js                → agrupar por liga/fecha, formatear hora, color de escudo
-  leagueCategories.js     → agrupa las ligas del feed por continente/juveniles/femenino
-  index.css               → todo el estilo (scoreboard theme)
-  App.jsx                 → rutas (React Router)
-  Layout.jsx              → header, sidebar, buscador, y el fetch del feed del día
-  useFavorites.js         → favoritos (equipos/ligas) en localStorage
-  pages/
-    DayFeedPage.jsx        → /fecha/:date
-    TeamDetailPage.jsx     → /equipo/:id
-    MatchDetailPage.jsx    → /partido/:id
-  components/
-    LeagueSidebar.jsx      → cajón de ligas por categoría
-    MatchFeed.jsx, MatchCard.jsx
-    TeamDetail.jsx, MatchDetail.jsx, LineupPitch.jsx
-    SearchBar.jsx, DateStrip.jsx, FavoriteButton.jsx
+  App.jsx              routes (React Router)
+  Layout.jsx           header, league sidebar, search and the daily feed fetch
+  api.js               calls to the backend
+  utils.js             grouping by league/date, time formatting, crest colors
+  leagueCategories.js  groups the feed's leagues by continent, youth and women's
+  competitions/        competition ranking and region tree
+  useFavorites.js      favorite teams and leagues in localStorage
+  useDocumentMeta.js   per-page title and meta tags (SEO)
+  useStructuredData.js JSON-LD structured data
+  useInstallPrompt.js  PWA install prompt
+  motion/              reusable animations (Motion)
+  pages/               one page per route
+  components/          match feed and cards, match detail (events, lineups, stats,
+                       shot map, momentum, head-to-head), standings, team, player,
+                       coach, referee and stadium details, search, date strip
+public/
+  manifest.webmanifest, sw.js   PWA
+  robots.txt, sitemap.xml       SEO
 ```
 
-No hay tabla de posiciones ni "partidos de una liga por temporada": el
-plan free de API-Football no da acceso a esos endpoints para la
-temporada actual (ver el README del backend). El sidebar de ligas
-filtra el feed del día ya cargado, no navega a una página aparte.
+### Routes
 
-## Cómo correrlo
+| Route | Page |
+|---|---|
+| `/fecha/:date` | Matches of the day |
+| `/partido/:id` | Match detail |
+| `/equipo/:id` | Team |
+| `/jugador/:id` | Player |
+| `/competicion/:id` | Competition and standings |
+| `/entrenador/:id` · `/arbitro/:id` · `/estadio/:id` | Coach · Referee · Stadium |
+| `/transferencias` | Transfers |
+| `/comparar` | Player comparison |
 
-Necesitás el backend (`marcador-backend`) corriendo en paralelo — este
-frontend le pega a `http://localhost:3001` por default.
+### Run
+
+Needs the backend running (`../backend`). By default it calls `http://localhost:3001`; to use another URL, set `VITE_API_BASE` in a `.env` file.
 
 ```bash
 npm install
-npm run dev
+npm run dev     # http://localhost:5173
+npm run build   # production build in dist/
 ```
 
-Abre en `http://localhost:5173`.
+Deployed on Vercel with Root Directory set to `frontend`.
 
-Si tu backend corre en otro puerto/host, copiá `.env.example` a `.env` y
-cambiá `VITE_API_BASE`.
+---
 
-## Build de producción
+## Español
+
+Aplicación web en React 19 + Vite + React Router para [partidos.com.ar](https://partidos.com.ar).
+
+### Estructura
+
+```
+src/
+  App.jsx              rutas (React Router)
+  Layout.jsx           header, sidebar de ligas, buscador y el fetch del feed del día
+  api.js               llamadas al backend
+  utils.js             agrupar por liga/fecha, formatear hora, colores de escudo
+  leagueCategories.js  agrupa las ligas del feed por continente, juveniles y femenino
+  competitions/        ranking de competiciones y árbol de regiones
+  useFavorites.js      equipos y ligas favoritos en localStorage
+  useDocumentMeta.js   título y meta tags por página (SEO)
+  useStructuredData.js datos estructurados JSON-LD
+  useInstallPrompt.js  aviso para instalar la PWA
+  motion/              animaciones reutilizables (Motion)
+  pages/               una página por ruta
+  components/          feed y tarjetas de partidos, detalle de partido (eventos,
+                       alineaciones, estadísticas, mapa de tiros, momentum, historial),
+                       tabla de posiciones, fichas de equipo, jugador, entrenador,
+                       árbitro y estadio, buscador, selector de fecha
+public/
+  manifest.webmanifest, sw.js   PWA
+  robots.txt, sitemap.xml       SEO
+```
+
+### Rutas
+
+| Ruta | Página |
+|---|---|
+| `/fecha/:date` | Partidos del día |
+| `/partido/:id` | Detalle de partido |
+| `/equipo/:id` | Equipo |
+| `/jugador/:id` | Jugador |
+| `/competicion/:id` | Competición y tabla de posiciones |
+| `/entrenador/:id` · `/arbitro/:id` · `/estadio/:id` | Entrenador · Árbitro · Estadio |
+| `/transferencias` | Transferencias |
+| `/comparar` | Comparador de jugadores |
+
+### Cómo correrlo
+
+Necesita el backend corriendo (`../backend`). Por defecto llama a `http://localhost:3001`; para usar otra URL, definí `VITE_API_BASE` en un archivo `.env`.
 
 ```bash
-npm run build
+npm install
+npm run dev     # http://localhost:5173
+npm run build   # build de producción en dist/
 ```
 
-Genera `dist/`, listo para servir estático (Vercel, Netlify, Nginx, etc.)
+Se publica en Vercel con Root Directory = `frontend`.
