@@ -19,7 +19,9 @@ const fs = require("fs");
 const path = require("path");
 const Database = require("better-sqlite3");
 
-const DATA_DIR = path.join(__dirname, "data");
+// DATA_DIR se puede pisar por variable de entorno (los tests usan una
+// carpeta temporal para no tocar data/store.db).
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const DB_FILE = path.join(DATA_DIR, "store.db");
 const OLD_CACHE_FILE = path.join(DATA_DIR, "cache.json");
 const OLD_QUOTA_FILE = path.join(DATA_DIR, "quota.json");

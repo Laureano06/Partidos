@@ -1,5 +1,7 @@
 # Partidos: live football scores
 
+[![Tests](https://github.com/Laureano06/Partidos/actions/workflows/tests.yml/badge.svg)](https://github.com/Laureano06/Partidos/actions/workflows/tests.yml)
+
 **Live:** https://partidos.com.ar
 
 ![Partidos: matches of the day](docs/screenshots/home.png)
@@ -56,6 +58,18 @@ npm install
 npm run dev            # http://localhost:5173
 ```
 
+### Tests
+
+46 automated tests run on every push with GitHub Actions:
+
+- **Backend** (`node:test`): cache TTLs, request de-duplication under concurrent requests, daily quota guard and day rollover. Each test uses a temporary SQLite database.
+- **Frontend** (Vitest): date handling pinned to Argentina time (checked across time zones), league grouping and category detection.
+
+```bash
+cd backend && npm test
+cd frontend && npm test
+```
+
 ### History
 
 This repo merges the former `Marcador-frontend` and `Marcador-backend` repositories, with their full commit history preserved.
@@ -104,6 +118,18 @@ npm start              # http://localhost:3001
 cd frontend
 npm install
 npm run dev            # http://localhost:5173
+```
+
+### Tests
+
+46 tests automáticos que corren en cada push con GitHub Actions:
+
+- **Backend** (`node:test`): TTL de la caché, de-duplicación de requests con pedidos simultáneos, control de cuota diaria y cambio de día. Cada test usa una base SQLite temporal.
+- **Frontend** (Vitest): manejo de fechas fijado a la hora de Argentina (probado en varias zonas horarias), agrupación de ligas y detección de categorías.
+
+```bash
+cd backend && npm test
+cd frontend && npm test
 ```
 
 ### Historial
